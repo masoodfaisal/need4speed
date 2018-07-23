@@ -1,0 +1,15 @@
+FROM registry.fedoraproject.org/fedora as buildserver
+RUN dnf -y install wget zlib-devel gcc && dnf -y clean all && mkdir /deployments
+WORKDIR /deployments
+RUN wget https://github.com/oracle/graal/releases/download/vm-1.0.0-rc4/graalvm-ce-1.0.0-rc4-linux-amd64.tar.gz
+RUN tar xvfz graalvm-ce-1.0.0-rc4-linux-amd64.tar.gz
+COPY ./netty-mongo-native/src/main/resources/netty_reflection_config.json .
+COPY ./netty-mongo-native/target/netty-mongo-native-full.jar .
+RUN /deployments/graalvm-ce-1.0.0-rc4/bin/native-image -jar netty-mongo-native-full.jar -H:ReflectionConfigurationResources=netty_reflection_config.json -H:Name=netty-mongo-native-full -H:+ReportUnsupportedElementsAtRuntime
+
+FROM registry.fedoraproject.org/fedora-minimal
+RUN mkdir /deployments
+COPY --from=buildserver /deployments/netty-mongo-native-full /deployments/.
+RUN groupadd dev && useradd dev -g dev && chown -R dev:dev /deployments
+USER dev
+CMD ["/deployments/netty-mongo-native-full"]

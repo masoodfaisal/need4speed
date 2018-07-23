@@ -1,0 +1,6 @@
+FROM registry.fedoraproject.org/fedora
+RUN dnf -y install java-1.8.0-openjdk-headless --nodocs && dnf -y clean all && mkdir /deployments
+COPY ./netty-mongo-native/target/netty-mongo-native-full.jar /deployments
+RUN groupadd dev && useradd dev -g dev && chown -R dev:dev /deployments
+USER dev
+CMD ["java", "-showversion", "-jar", "/deployments/netty-mongo-native-full.jar"]
